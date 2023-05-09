@@ -2,11 +2,14 @@ package com.ivankvasov.dg
 
 import android.app.ActivityManager
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.BatteryManager
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import java.io.File
@@ -102,8 +105,32 @@ class MainActivity : AppCompatActivity() {
                 val usedMemory = (memoryInfo.totalMem - memoryInfo.availMem) / (1024 * 1024)
                 val totalMemory = memoryInfo.totalMem / (1024 * 1024)
                 file.appendText("Memory Info: Used memory: $usedMemory MB, Total memory: $totalMemory MB\n")
+
+
+                val batteryStatus = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+
+                val batteryLevel = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val batteryScale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                val batteryPercentage = batteryLevel?.times(100)?.div(batteryScale?.toFloat() ?: 100f)
+
+                val batteryStatusInt = batteryStatus?.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                val isCharging = batteryStatusInt == BatteryManager.BATTERY_STATUS_CHARGING ||
+                        batteryStatusInt == BatteryManager.BATTERY_STATUS_FULL
+
+                val batteryHealthInt = batteryStatus?.getIntExtra(BatteryManager.EXTRA_HEALTH, -1)
+                val batteryHealth = when (batteryHealthInt) {
+                    BatteryManager.BATTERY_HEALTH_GOOD -> "Good"
+                    BatteryManager.BATTERY_HEALTH_OVERHEAT -> "Overheat"
+                    BatteryManager.BATTERY_HEALTH_DEAD -> "Dead"
+                    BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "Over Voltage"
+                    BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "Unspecified Failure"
+                    else -> "Unknown"
+                }
+
+                file.appendText("Battery Info: Level: $batteryPercentage%, Charging: $isCharging, Health: $batteryHealth\n")
             }
         }, 0, 60000)
+
     }
 
 }
