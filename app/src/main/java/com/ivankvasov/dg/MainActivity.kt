@@ -11,14 +11,18 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.BatteryManager
 import android.os.Bundle
+import android.os.Debug
 import android.support.v7.app.AppCompatActivity
+import java.io.BufferedReader
 import java.io.File
+import java.io.FileReader
 import java.text.SimpleDateFormat
 import java.util.*
 
 
 class MainActivity : AppCompatActivity() {
     private lateinit var file: File
+    private val cpuInfo = HashMap<String, Long>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +36,8 @@ class MainActivity : AppCompatActivity() {
         Timer().schedule(object :
             TimerTask() {  // Start a timer to write the current time to the file every minute
             override fun run() {
+
+                file.appendText("=================================================\n")
 
                 val currentTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date()) // Get time
 
@@ -128,9 +134,10 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 file.appendText("Battery Info: Level: $batteryPercentage%, Charging: $isCharging, Health: $batteryHealth\n")
+
+                val cpuStats = Debug.threadCpuTimeNanos()
+                file.appendText("Cpu percent load: $cpuStats")
             }
         }, 0, 60000)
-
     }
-
 }
