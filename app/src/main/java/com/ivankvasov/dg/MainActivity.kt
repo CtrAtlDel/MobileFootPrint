@@ -136,7 +136,7 @@ class MainActivity : AppCompatActivity() {
                 file.appendText("Battery Info: Level: $batteryPercentage%, Charging: $isCharging, Health: $batteryHealth\n")
 
                 val cpuStats = Debug.threadCpuTimeNanos()
-                file.appendText("Cpu percent load: $cpuStats")
+                file.appendText("Cpu percent load: $cpuStats\n")
             }
         }, 0, 60000)
     }
