@@ -1,9 +1,13 @@
 package com.ivankvasov.dg
 
 import android.app.ActivityManager
+import android.content.Context
 import android.content.res.Configuration
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
-import android.os.Handler
 import android.support.v7.app.AppCompatActivity
 import java.io.File
 import java.text.SimpleDateFormat
@@ -12,7 +16,6 @@ import java.util.*
 
 class MainActivity : AppCompatActivity() {
     private lateinit var file: File
-    private var handler: Handler? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,6 +23,8 @@ class MainActivity : AppCompatActivity() {
 
 
         file = File(this.filesDir, "time.txt")  // Create a new file to store the time data
+
+        val orientation = resources.configuration.orientation
 
         Timer().schedule(object :
             TimerTask() {  // Start a timer to write the current time to the file every minute
@@ -29,8 +34,7 @@ class MainActivity : AppCompatActivity() {
 
                 val numCores = Runtime.getRuntime().availableProcessors() // Number of cores
 
-                val orientation = resources.configuration.orientation // Get orientation
-                val orientationString =
+                val orientationString =  // Get orientation
                     if (orientation == Configuration.ORIENTATION_PORTRAIT) "Portrait" else "Landscape"
 
                 val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
@@ -38,22 +42,66 @@ class MainActivity : AppCompatActivity() {
 
                 val memoryInfo = ActivityManager.MemoryInfo()
 
-                // Get memory info
                 activityManager.getMemoryInfo(memoryInfo)
 
-                // Print memory info
-//                println("Total memory: ${memoryInfo.totalMem}")
                 val availMem = memoryInfo.availMem
                 val threshold = memoryInfo.threshold
+                val totalMem = memoryInfo.totalMem
+
+                val sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                val temperatureSensor =
+                    sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE)
 
                 file.appendText("Time: $currentTime\n") // Get time
                 file.appendText("Core numbers: $numCores\n") // Get Number of cores
                 file.appendText("Orientation: $orientationString\n") // Get orientation of device
                 file.appendText("Running process: $runningProcesses\n") // Get orientation of device
                 file.appendText("Available memory: $availMem\n") // Get orientation of device
-                file.appendText("Treshhold memory: $threshold\n") // Get orientation of device
+                file.appendText("Threshold memory: $threshold\n") // Get orientation of device
+                file.appendText("Total memory: $totalMem\n") // Get orientation of device
 
+                var temperature: Float
+                if (temperatureSensor == null) {
+                    // The device doesn't have a temperature sensor
+                } else {
+                    // The device has a temperature sensor
+                    val sensorEventListener = object : SensorEventListener {
+                        override fun onSensorChanged(event: SensorEvent?) {
+                            if (event != null) {
+                                var tempere = event.values[0]
+                                temperature = tempere
+                                file.appendText("Temperature: $temperature\n") // Get orientation of device
+                            }
+                        }
 
+                        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+                        }
+                    }
+
+                    sensorManager.registerListener(
+                        sensorEventListener,
+                        temperatureSensor,
+                        SensorManager.SENSOR_DELAY_NORMAL
+                    )
+                }
+
+                val availableCores = Runtime.getRuntime().availableProcessors() // Max and min frequency
+                for (i in 0 until availableCores) {
+                    val maxFreqFile = File("/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_max_freq")
+                    val minFreqFile = File("/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_min_freq")
+
+                    if (maxFreqFile.exists() && minFreqFile.exists()) {
+                        val maxFreq = maxFreqFile.readText().trim().toDouble() / 1000
+                        val minFreq = minFreqFile.readText().trim().toDouble() / 1000
+
+                        file.appendText("CPU Info: Core $i - Max Freq: $maxFreq GHz, Min Freq: $minFreq GHz\n")
+                    }
+                }
+
+                activityManager.getMemoryInfo(memoryInfo)
+                val usedMemory = (memoryInfo.totalMem - memoryInfo.availMem) / (1024 * 1024)
+                val totalMemory = memoryInfo.totalMem / (1024 * 1024)
+                file.appendText("Memory Info: Used memory: $usedMemory MB, Total memory: $totalMemory MB\n")
             }
         }, 0, 60000)
     }
