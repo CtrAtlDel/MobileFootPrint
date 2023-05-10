@@ -13,21 +13,24 @@ import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Debug
 import android.support.v7.app.AppCompatActivity
-import java.io.BufferedReader
 import java.io.File
-import java.io.FileReader
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
 
 class MainActivity : AppCompatActivity() {
+    private val FILE_NAME = "statistic.txt"
+    private val SEPARATOR = "=================================================\n"
     private lateinit var file: File
     private val cpuInfo = HashMap<String, Long>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        var fos: FileOutputStream? = null
 
+        fos = FileOutputStream(getExternalPath())
 
         file = File(this.filesDir, "time.txt")  // Create a new file to store the time data
 
@@ -36,7 +39,7 @@ class MainActivity : AppCompatActivity() {
         Timer().schedule(object :
             TimerTask() {  // Start a timer to write the current time to the file every minute
             override fun run() {
-
+                fos.write(SEPARATOR.toByteArray())
                 file.appendText("=================================================\n")
 
                 val currentTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date()) // Get time
@@ -62,12 +65,19 @@ class MainActivity : AppCompatActivity() {
                     sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE)
 
                 file.appendText("Time: $currentTime\n") // Get time
+                fos.write("Time: $currentTime\n".toByteArray())
                 file.appendText("Core numbers: $numCores\n") // Get Number of cores
+                fos.write("Core numbers: $numCores\n".toByteArray())
                 file.appendText("Orientation: $orientationString\n") // Get orientation of device
+                fos.write("Orientation: $orientationString\n".toByteArray())
                 file.appendText("Running process: $runningProcesses\n") // Get orientation of device
+                fos.write("Running process: $runningProcesses\n".toByteArray())
                 file.appendText("Available memory: $availMem\n") // Get orientation of device
+                fos.write("Available memory: $availMem\n".toByteArray())
                 file.appendText("Threshold memory: $threshold\n") // Get orientation of device
+                fos.write("Threshold memory: $threshold\n".toByteArray())
                 file.appendText("Total memory: $totalMem\n") // Get orientation of device
+                fos.write("Total memory: $totalMem\n".toByteArray())
 
                 var temperature: Float
                 if (temperatureSensor == null) {
@@ -80,6 +90,7 @@ class MainActivity : AppCompatActivity() {
                                 var tempere = event.values[0]
                                 temperature = tempere
                                 file.appendText("Temperature: $temperature\n") // Get orientation of device
+                                fos.write("Temperature: $temperature\n".toByteArray())
                             }
                         }
 
@@ -94,7 +105,8 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
 
-                val availableCores = Runtime.getRuntime().availableProcessors() // Max and min frequency
+                val availableCores =
+                    Runtime.getRuntime().availableProcessors() // Max and min frequency
                 for (i in 0 until availableCores) {
                     val maxFreqFile = File("/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_max_freq")
                     val minFreqFile = File("/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_min_freq")
@@ -104,6 +116,7 @@ class MainActivity : AppCompatActivity() {
                         val minFreq = minFreqFile.readText().trim().toDouble() / 1000
 
                         file.appendText("CPU Info: Core $i - Max Freq: $maxFreq GHz, Min Freq: $minFreq GHz\n")
+                        fos.write("CPU Info: Core $i - Max Freq: $maxFreq GHz, Min Freq: $minFreq GHz\n".toByteArray())
                     }
                 }
 
@@ -111,13 +124,15 @@ class MainActivity : AppCompatActivity() {
                 val usedMemory = (memoryInfo.totalMem - memoryInfo.availMem) / (1024 * 1024)
                 val totalMemory = memoryInfo.totalMem / (1024 * 1024)
                 file.appendText("Memory Info: Used memory: $usedMemory MB, Total memory: $totalMemory MB\n")
+                fos.write("Memory Info: Used memory: $usedMemory MB, Total memory: $totalMemory MB\n".toByteArray())
 
-
-                val batteryStatus = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+                val batteryStatus =
+                    registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
 
                 val batteryLevel = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                 val batteryScale = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                val batteryPercentage = batteryLevel?.times(100)?.div(batteryScale?.toFloat() ?: 100f)
+                val batteryPercentage =
+                    batteryLevel?.times(100)?.div(batteryScale?.toFloat() ?: 100f)
 
                 val batteryStatusInt = batteryStatus?.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
                 val isCharging = batteryStatusInt == BatteryManager.BATTERY_STATUS_CHARGING ||
@@ -134,10 +149,15 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 file.appendText("Battery Info: Level: $batteryPercentage%, Charging: $isCharging, Health: $batteryHealth\n")
-
+                fos.write("Battery Info: Level: $batteryPercentage%, Charging: $isCharging, Health: $batteryHealth\n".toByteArray())
                 val cpuStats = Debug.threadCpuTimeNanos()
                 file.appendText("Cpu percent load: $cpuStats\n")
+                fos.write("Cpu percent load: $cpuStats\n".toByteArray())
             }
         }, 0, 60000)
+    }
+
+    fun getExternalPath(): File? {
+        return File(getExternalFilesDir(null), FILE_NAME)
     }
 }
